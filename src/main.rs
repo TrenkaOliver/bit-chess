@@ -101,23 +101,23 @@ fn main() {
         //second layer of filtering out invalid moves (does it follow the rules)
         if match piece {
             "p" | "pawn" => {
-                old.1 != new.1 || (new.0 as i8 - old.0 as i8).abs() > 2
+                old.1 != new.1 || (new.0 - old.0).abs() > 2
             },
             "k" | "knight" => {
-                (old.0 as i8 - new.0 as i8).abs() + (old.1 as i8 - new.1 as i8).abs() != 3
+                (old.0 - new.0).abs() + (old.1 - new.1).abs() != 3
             },
             "b" | "bishop" => {
-                (old.0 as i8 - old.1 as i8) != (new.0 as i8 - new.1 as i8) &&
+                old.0 - old.1 != new.0 - new.1 &&
                 old.0 + old.1 != new.0 + new.1
             }"r" | "rook" => {
                 old.0 != new.0 && old.1 != new.1
             },
             "q" | "queen" => {
                 old.0 != new.0 && old.1 != new.1 &&
-                ((old.0 as i8 - old.1 as i8) != (new.0 as i8 - new.1 as i8) && old.0 + old.1 != new.0 + new.1)
+                (old.0 - old.1 != new.0 - new.1 && old.0 + old.1 != new.0 + new.1)
             },
             "king" => {
-                (old.0 as i8 - new.0 as i8).abs() > 1 || (old.1 as i8 - new.1 as i8).abs() > 1
+                (old.0 - new.0).abs() > 1 || (old.1 - new.1).abs() > 1
             },
             other => {
                 println!("no piece called \"{other}\"");
@@ -133,7 +133,8 @@ fn main() {
         let new_mask_rev = new_mask ^ u64::MAX;
 
         //get a unified mask for checking if something's in the way
-        let mask_uni = get_unified_mask(&board);
+        let uni_mask = get_unified_mask(&board);
+        let opp_mask = get_unified_mask(&board[if is_next_white {6..12} else {0..6}]);
 
         //get the index of the given piece in the board array
         let mut idx: usize = if is_next_white {0} else {6};
@@ -146,6 +147,7 @@ fn main() {
         match piece {
             "p" | "pawn" => {
                 if old_mask & board[idx] == 0 {println!("invalid move, try again!"); continue 'main;}
+
                 if is_next_white {
                     for rank in old.0 + 1..=new.0 {
                         squares |= 1u64 << rank * 8 + new.1;
@@ -164,28 +166,85 @@ fn main() {
             "b" | "bishop" => {
                 idx += 2;
                 if old_mask & board[idx] == 0 {println!("invalid move, try again!"); continue 'main;}
-                //todo: implement
+
+                //file distance is equal to rank distance, doesn't matter which one we check
+                let file_distance = (old.0 - new.0).abs();
+                let rank_step = if old.0 > new.0 {-1} else {1};
+                let file_step = if old.1 > new.1 {-1} else {1};
+                for i in 1..file_distance {
+                    let rank = old.0 + i * rank_step;
+                    let file = old.1 + i * file_step;
+                    squares |= 1u64 << rank * 8 + file;
+                }
             },
             "r" | "rook" => {
                 idx += 3;
                 if old_mask & board[idx] == 0 {println!("invalid move, try again!"); continue 'main;}
-                //todo: implement
+
+                if old.0 != new.0 { // change within a file 
+                    let rank_distance = (old.0 - new.0).abs();
+                    let step = if old.0 > new.0 {-1} else {1};
+                    for i in 1..rank_distance {
+                        squares |= 1u64 << (old.0 + i * step) * 8 + old.1;
+                    }
+                } else { // change is within a rank
+                    let file_distance = (old.1 - new.1).abs();
+                    let step = if old.1 > new.1 {-1} else {1};
+                    for i in 1..file_distance {
+                        squares |= 1u64 << old.0 * 8 + old.1 + i * step;
+                    }
+                }
             },
             "q" | "queen" => {
                 idx += 4;
                 if old_mask & board[idx] == 0 {println!("invalid move, try again!"); continue 'main;}
                 //todo: implement
+                if old.0 != new.0 && old.1 != new.1 { // moved diagnal
+                    //file distance is equal to rank distance, doesn't matter which one we check
+                    let file_distance = (old.0 - new.0).abs();
+                    let rank_step = if old.0 > new.0 {-1} else {1};
+                    let file_step = if old.1 > new.1 {-1} else {1};
+                    for i in 1..file_distance {
+                        let rank = old.0 + i * rank_step;
+                        let file = old.1 + i * file_step;
+                        squares |= 1u64 << rank * 8 + file;
+                    }
+                }
+                else if old.0 != new.0 { // change within a file
+                    let rank_distance = (old.0 - new.0).abs();
+                    let step = if old.0 > new.0 {-1} else {1};
+                    for i in 1..rank_distance {
+                        squares |= 1u64 << (old.0 + i * step) * 8 + old.1;
+                    }
+                } else { // change is within a rank
+                    let file_distance = (old.1 - new.1).abs();
+                    let step = if old.1 > new.1 {-1} else {1};
+                    for i in 1..file_distance {
+                        squares |= 1u64 << old.0 * 8 + old.1 + i * step;
+                    }
+                }
             },
             "king" => {
                 idx += 5;
                 if old_mask & board[idx] == 0 {println!("invalid move, try again!"); continue 'main;}
-                //todo: implement                
             },
             _ => ()
         }
 
         //check if the piece doesn't pass through anything;
-        if mask_uni & squares != 0 {println!("something's in the way..."); continue 'main;}
+        if uni_mask & squares != 0 {println!("something's in the way..."); continue 'main;}
+
+        //check if takes something
+        if (piece != "pawn" || piece != "p") && new_mask & opp_mask != 0 {
+            let opp_pieces = if is_next_white {&mut board[6..12]} else {&mut board[0..6]};
+            for piece in opp_pieces {
+                let taken_piece = new_mask & *piece;
+                if taken_piece != 0 {
+                    *piece &= taken_piece ^ u64::MAX;
+                    break;
+                }
+            }
+        }
 
         //move the piece
         board[idx] &= old_mask_rev;
@@ -197,10 +256,10 @@ fn main() {
 }
 
 //0: rank, 1: file
-fn rank_and_file(input: &str) -> (u8, u8) {
+fn rank_and_file(input: &str) -> (i8, i8) {
     let mut chars = input.chars();
-    let file = chars.next().unwrap().to_ascii_uppercase() as u8;
-    let rank = chars.next().unwrap() as u8;
+    let file = chars.next().unwrap().to_ascii_uppercase() as i8;
+    let rank = chars.next().unwrap() as i8;
     (
         rank - 49, //rank
         file - 65, //file
