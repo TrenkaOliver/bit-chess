@@ -33,7 +33,7 @@ fn main() {
         BLACK_KING,
     ];
     
-    let mut is_next_white = true;
+    let mut is_white = true;
 
     'main: loop {
         //print current board:
@@ -41,22 +41,23 @@ fn main() {
 
         //get a unified mask for checking if something's in the way
         let uni_mask = get_unified_mask(&board);
-        let opp_mask = get_unified_mask(&board[if is_next_white {6..12} else {0..6}]);
+        let opp_mask = get_unified_mask(&board[if is_white {6..12} else {0..6}]);
 
-        let opp_idx = if is_next_white {6} else {0};
+        let opp_idx = if is_white {6} else {0};
         let checked = is_in_check(
-            board[if is_next_white {5} else {11}],
+            board[if is_white {5} else {11}],
             uni_mask,
             board[opp_idx],
             board[opp_idx + 1], 
             board[opp_idx + 2] | board[opp_idx + 4],
             board[opp_idx + 3] | board[opp_idx + 4],
+            is_white,
         );
 
         println!("in check: {}", checked);
 
         //get next move
-        print!("{} moves: ", if is_next_white {"white"} else {"black"});
+        print!("{} moves: ", if is_white {"white"} else {"black"});
         io::stdout().flush().unwrap();
 
         let mut input = String::new();
@@ -84,10 +85,11 @@ fn main() {
         //second layer of filtering out invalid moves (does it follow the rules)
         if match piece {
             "p" | "pawn" => {
-                old.1 != new.1 || (new.0 - old.0).abs() > 2
+                (new.0 - old.0).abs() > 2 || (new.1 - old.1).abs() > 1 || ((new.1 - old.1).abs() == 1 && 
+                (if is_white {old_mask << (8 + new.1 - old.1)} else {old_mask >> (8 + new.1 - old.1)}) & opp_mask == 0)
             },
             "k" | "knight" => {
-                (old.0 - new.0).abs() + (old.1 - new.1).abs() != 3
+                (old.0 - new.0).abs() + (old.1 - new.1).abs() != 3 || (new.0 == 0 || new.1 == 0) 
             },
             "b" | "bishop" => {
                 old.0 - old.1 != new.0 - new.1 &&
@@ -115,7 +117,7 @@ fn main() {
         let new_mask = 1u64 << new.0 * 8 + new.1;
 
         //get the index of the given piece in the board array
-        let mut idx: usize = if is_next_white {0} else {6};
+        let mut idx: usize = if is_white {0} else {6};
 
         //create an int to create map for "travelled squares"
         let mut squares: u64 = 0;
@@ -126,13 +128,15 @@ fn main() {
             "p" | "pawn" => {
                 if old_mask & board[idx] == 0 {println!("invalid move, try again!"); continue 'main;}
 
-                if is_next_white {
-                    for rank in old.0 + 1..=new.0 {
-                        squares |= 1u64 << rank * 8 + new.1;
-                    };
-                } else {
-                    for rank in new.0..old.0 {
-                        squares |= 1u64 << rank * 8 + new.1;
+                if old.0 == new.0 {
+                    if is_white {
+                        for rank in old.0 + 1..=new.0 {
+                            squares |= 1u64 << rank * 8 + new.1;
+                        };
+                    } else {
+                        for rank in new.0..old.0 {
+                            squares |= 1u64 << rank * 8 + new.1;
+                        }
                     }
                 }
             },
@@ -214,7 +218,7 @@ fn main() {
 
         //check if takes something
         if (piece != "pawn" || piece != "p") && new_mask & opp_mask != 0 {
-            let opp_pieces = if is_next_white {&mut board[6..12]} else {&mut board[0..6]};
+            let opp_pieces = if is_white {&mut board[6..12]} else {&mut board[0..6]};
             for piece in opp_pieces {
                 let taken_piece = new_mask & *piece;
                 if taken_piece != 0 {
@@ -229,6 +233,6 @@ fn main() {
         board[idx] |= new_mask;
 
         //flip next move
-        is_next_white = !is_next_white;
+        is_white = !is_white;
     }
 }

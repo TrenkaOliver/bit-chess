@@ -69,12 +69,14 @@ pub fn print_table(board: &[u64]) {
 
 ///decides whether king is in check
 #[inline]
-pub fn is_in_check(king: u64, board: u64, pawns: u64, knights: u64, diagnal: u64, linear: u64) -> bool {
+pub fn is_in_check(king: u64, board: u64, pawns: u64, knights: u64, diagnal: u64, linear: u64, is_white: bool) -> bool {
     //get kings pos:
     let bit_idx = king.trailing_zeros() as i8;
     let rank = bit_idx / 8;
     let file = bit_idx % 8;
 
+
+    //KNIGHT
     //create knight mask:
     let mut knight_mask = 0u64;
 
@@ -91,6 +93,8 @@ pub fn is_in_check(king: u64, board: u64, pawns: u64, knights: u64, diagnal: u64
     //check against knight mask:
     if knight_mask & knights != 0 {return true;}
 
+
+    //DIAGNAL
     //create a mask which represent every piece that cannot take diagnal;
     let other = board & (diagnal ^ u64::MAX);
 
@@ -120,6 +124,8 @@ pub fn is_in_check(king: u64, board: u64, pawns: u64, knights: u64, diagnal: u64
     //check against mask:
     if diagnal_mask & diagnal != 0 {return true;}
 
+
+    //LINEAR
     //recreate other (similar just no it doesn't contain linear hitting pieces)
     let other = board & (linear ^ u64::MAX);
 
@@ -141,7 +147,19 @@ pub fn is_in_check(king: u64, board: u64, pawns: u64, knights: u64, diagnal: u64
     //check against mask:
     if linear_mask & linear != 0 {return true;}
 
-    //so far pawns cannot give a check and can't take pieces, will implement later
+    
+    //PAWN
+    //create pawn mask:
+    let pawn_mask = if is_white {
+        (king << 7) | (king << 9)
+    } else {
+        (king >> 9) | (king >> 7)
+    };
 
+    //check against mask
+    if pawn_mask & pawns != 0 {return true;}
+    
+
+    //if there was no check return false
     false
 }
