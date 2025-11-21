@@ -1,5 +1,7 @@
 use std::io::{self, Write};
 
+use bit_chess::*;
+
 const WHITE_PAWNS: u64   = 0b1111_1111_u64 << 8;
 const WHITE_KNIGHTS: u64 = 0b0100_0010_u64;
 const WHITE_BISHOPS: u64 = 0b0010_0100_u64;
@@ -35,42 +37,23 @@ fn main() {
 
     'main: loop {
         //print current board:
-        for rank in (0..8).rev() {
-            let rank_value = rank * 8;
-            print!("{} ", rank + 1);
-            for file in 0..8 {
-                let square = 1u64 << (rank_value + file);
-                if board[0] & square != 0 {
-                    print!("♙ ");
-                } else if board[6] & square != 0 {
-                    print!("♟ ");
-                } else if board[1] & square != 0 {
-                    print!("♘ ");
-                } else if board[7] & square != 0 {
-                    print!("♞ ");
-                } else if board[2] & square != 0 {
-                    print!("♗ ");
-                } else if board[8] & square != 0 {
-                    print!("♝ ");
-                } else if board[3] & square != 0 {
-                    print!("♖ ");
-                } else if board[9] & square != 0 {
-                    print!("♜ ");
-                } else if board[4] & square != 0 {
-                    print!("♕ ");
-                } else if board[10] & square != 0 {
-                    print!("♛ ");
-                } else if board[5] & square != 0 {
-                    print!("♔ ");
-                } else if board[11] & square != 0 {
-                    print!("♚ ");
-                } else {
-                    print!("・");
-                }
-            }
-            println!();
-        }
-        println!("  A B C D E F G H\n");
+        print_table(&board);
+
+        //get a unified mask for checking if something's in the way
+        let uni_mask = get_unified_mask(&board);
+        let opp_mask = get_unified_mask(&board[if is_next_white {6..12} else {0..6}]);
+
+        let opp_idx = if is_next_white {6} else {0};
+        let checked = is_in_check(
+            board[if is_next_white {5} else {11}],
+            uni_mask,
+            board[opp_idx],
+            board[opp_idx + 1], 
+            board[opp_idx + 2] | board[opp_idx + 4],
+            board[opp_idx + 3] | board[opp_idx + 4],
+        );
+
+        println!("in check: {}", checked);
 
         //get next move
         print!("{} moves: ", if is_next_white {"white"} else {"black"});
@@ -130,11 +113,6 @@ fn main() {
 
         //create necesarry mask about the new position
         let new_mask = 1u64 << new.0 * 8 + new.1;
-        let new_mask_rev = new_mask ^ u64::MAX;
-
-        //get a unified mask for checking if something's in the way
-        let uni_mask = get_unified_mask(&board);
-        let opp_mask = get_unified_mask(&board[if is_next_white {6..12} else {0..6}]);
 
         //get the index of the given piece in the board array
         let mut idx: usize = if is_next_white {0} else {6};
@@ -253,23 +231,4 @@ fn main() {
         //flip next move
         is_next_white = !is_next_white;
     }
-}
-
-//0: rank, 1: file
-fn rank_and_file(input: &str) -> (i8, i8) {
-    let mut chars = input.chars();
-    let file = chars.next().unwrap().to_ascii_uppercase() as i8;
-    let rank = chars.next().unwrap() as i8;
-    (
-        rank - 49, //rank
-        file - 65, //file
-    )
-}
-
-fn get_unified_mask(pieces: &[u64]) -> u64 {
-    let mut result: u64 = 0;
-    for piece in pieces.iter() {
-        result |= piece;
-    }
-    result
 }
