@@ -77,7 +77,7 @@ fn main() {
         //get information about new positon
         let new = rank_and_file(input.next().unwrap());
 
-        //first layer of filtering out invalid moves (does it go out of the board)
+        //first layer of filtering out invalid moves (does it go out of the board) or doesn't move the piece
         if old.0 > 7 || old.1 > 7 || new.0 > 7 || new.1 > 7 || (old.0 == new.0 && old.1 == new.1){
             println!("invalid move, try again!");
             continue 'main;
