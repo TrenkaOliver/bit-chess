@@ -85,8 +85,15 @@ fn main() {
         //second layer of filtering out invalid moves (does it follow the rules)
         if match piece {
             "p" | "pawn" => {
-                (new.0 - old.0).abs() > 2 || (new.1 - old.1).abs() > 1 || ((new.1 - old.1).abs() == 1 && 
-                (if is_white {old_mask << (8 + new.1 - old.1)} else {old_mask >> (8 + new.1 - old.1)}) & opp_mask == 0)
+                let delta_rank = new.0 - old.0;
+                let delta_file = new.1 - old.1;
+
+                delta_rank.abs() > 2 || //moves more than 2 squares vertically
+                delta_file.abs() > 1 || //moves more than 2 squares vertically
+                (delta_rank == 2 && delta_file == 0 && is_white && old_mask & WHITE_PAWNS == 0) || //moves 2 with white
+                (delta_rank == -2 && delta_file == 0 && !is_white && old_mask & BLACK_PAWNS == 0) || //moves 2 with black
+                (delta_rank == 1 && delta_file.abs() == 1 && is_white && old_mask << (8 + delta_file) == 0) || //takes with white
+                (delta_rank == 1 && delta_file.abs() == 1 && !is_white && old_mask >> (8 + delta_file) == 0) //takes with black
             },
             "k" | "knight" => {
                 (old.0 - new.0).abs() + (old.1 - new.1).abs() != 3 || (new.0 == 0 || new.1 == 0) 
@@ -119,7 +126,7 @@ fn main() {
         //get the index of the given piece in the board array
         let mut idx: usize = if is_white {0} else {6};
 
-        //create an int to create map for "travelled squares"
+        //create an int to create map for "travelled squares" (excluding squares which the given piece can take)
         let mut squares: u64 = 0;
 
         //exit early if there is none of the given piece in the given position
@@ -128,7 +135,7 @@ fn main() {
             "p" | "pawn" => {
                 if old_mask & board[idx] == 0 {println!("invalid move, try again!"); continue 'main;}
 
-                if old.0 == new.0 {
+                if old.1 == new.1 {
                     if is_white {
                         for rank in old.0 + 1..=new.0 {
                             squares |= 1u64 << rank * 8 + new.1;
