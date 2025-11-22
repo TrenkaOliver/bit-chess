@@ -42,6 +42,7 @@ fn main() {
         //get a unified mask for checking if something's in the way
         let uni_mask = get_unified_mask(&board);
         let opp_mask = get_unified_mask(&board[if is_white {6..12} else {0..6}]);
+        let own_mask = get_unified_mask(&board[if is_white {0..6} else {6..12}]);
 
         let opp_idx = if is_white {6} else {0};
         let checked = is_in_check(
@@ -216,15 +217,40 @@ fn main() {
             "king" => {
                 idx += 5;
                 if old_mask & board[idx] == 0 {println!("invalid move, try again!"); continue 'main;}
+                if is_in_check(
+                new_mask,
+                uni_mask,
+                board[opp_idx],
+                board[opp_idx + 1], 
+                board[opp_idx + 2] | board[opp_idx + 4],
+                board[opp_idx + 3] | board[opp_idx + 4],
+                is_white,) {
+                    println!("you're in check, try a different move!");
+                    continue 'main;
+                }
+                squares = new_mask & own_mask;
             },
             _ => ()
         }
 
         //check if the piece doesn't pass through anything;
-        if uni_mask & squares != 0 {println!("something's in the way..."); continue 'main;}
+        if uni_mask & squares != 0 {println!("something's in the way, try again!"); continue 'main;}
+
+        //check if the player was in check, than has he resolved it
+        if checked && is_in_check(
+        new_mask,
+        uni_mask,
+        board[opp_idx],
+        board[opp_idx + 1], 
+        board[opp_idx + 2] | board[opp_idx + 4],
+        board[opp_idx + 3] | board[opp_idx + 4],
+        is_white,) {
+            println!("you're in check, try a different move!");
+            continue 'main;
+        }
 
         //check if takes something
-        if (piece != "pawn" || piece != "p") && new_mask & opp_mask != 0 {
+        if new_mask & opp_mask != 0 {
             let opp_pieces = if is_white {&mut board[6..12]} else {&mut board[0..6]};
             for piece in opp_pieces {
                 let taken_piece = new_mask & *piece;
