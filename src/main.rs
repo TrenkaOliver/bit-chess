@@ -217,17 +217,6 @@ fn main() {
             "king" => {
                 idx += 5;
                 if old_mask & board[idx] == 0 {println!("invalid move, try again!"); continue 'main;}
-                if is_in_check(
-                new_mask,
-                uni_mask,
-                board[opp_idx],
-                board[opp_idx + 1], 
-                board[opp_idx + 2] | board[opp_idx + 4],
-                board[opp_idx + 3] | board[opp_idx + 4],
-                is_white,) {
-                    println!("you're in check, try a different move!");
-                    continue 'main;
-                }
                 squares = new_mask & own_mask;
             },
             _ => ()
@@ -235,19 +224,6 @@ fn main() {
 
         //check if the piece doesn't pass through anything;
         if uni_mask & squares != 0 {println!("something's in the way, try again!"); continue 'main;}
-
-        //check if the player was in check, than has he resolved it
-        if checked && is_in_check(
-        new_mask,
-        uni_mask,
-        board[opp_idx],
-        board[opp_idx + 1], 
-        board[opp_idx + 2] | board[opp_idx + 4],
-        board[opp_idx + 3] | board[opp_idx + 4],
-        is_white,) {
-            println!("you're in check, try a different move!");
-            continue 'main;
-        }
 
         //check if takes something
         if new_mask & opp_mask != 0 {
