@@ -1,11 +1,13 @@
 use crate::*;
 
+
+
 //decides whether king is in check
 #[inline]
 pub fn is_in_check(king: u64, board: u64, pawns: u64, knights: u64, bishop_like: u64, rook_like: u64, is_white: bool) -> bool {
     //KNIGHT
     //check against knight mask:
-    if get_knight_moves(king, 0) & knights != 0 {return true;}
+    if get_knight_moves(king, 0)[0] & knights != 0 {return true;}
 
     //PAWN
     //create pawn mask:
@@ -30,14 +32,12 @@ pub fn is_in_check(king: u64, board: u64, pawns: u64, knights: u64, bishop_like:
 
 
     //ROOK-LIKE
-    //recreate other (similar just no it doesn't contain linear hitting pieces)
+    //recreate other (similar, this doesn't contain not linear hitting pieces)
     let other = board & !rook_like;
 
     //create linear mask:
     let rook_mask = get_rook_moves(king, other, 0)[0];
-    println!("exposed to rook-like moving pieces: ");
-    print_mask(rook_mask);
-
+    
     //check against mask:
     if rook_mask & rook_like != 0 {return true;}    
 

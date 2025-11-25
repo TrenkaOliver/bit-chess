@@ -44,7 +44,20 @@ fn main() {
         let opp_mask = get_unified_mask(&board[if is_white {6..12} else {0..6}]);
         let own_mask = get_unified_mask(&board[if is_white {0..6} else {6..12}]);
 
+        //get the index for color
+        let idx = if is_white {0} else {6};
         let opp_idx = if is_white {6} else {0};
+
+        //get all legal moves for each piece type:
+        let pawn_moves = get_pawn_moves(board[idx], opp_mask, uni_mask, if is_white {WHITE_PAWNS} else {BLACK_PAWNS}, is_white);
+        let knight_moves = get_knight_moves(board[idx + 1], own_mask);
+        let bishop_moves = get_bishop_moves(board[idx + 2], own_mask, opp_mask);
+        let rook_moves = get_rook_moves(board[idx + 3], own_mask, opp_mask);
+        let queen_moves = get_queen_moves(board[idx + 4], own_mask, opp_mask);
+
+        
+
+
         let checked = is_in_check(
             board[if is_white {5} else {11}],
             uni_mask,
@@ -56,6 +69,7 @@ fn main() {
         );
 
         println!("in check: {}", checked);
+
 
         //get next move
         print!("{} moves: ", if is_white {"white"} else {"black"});

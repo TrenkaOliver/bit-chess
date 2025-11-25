@@ -1,33 +1,56 @@
 use crate::*;
 
-pub fn get_pawn_moves(pawns: u64, opp_mask: u64, uni_mask: u64, start_pos: u64, is_white: bool) -> u64 {
-    //one forward; 2 forward; take in any dir
-    if is_white {
-        pawns << 8 & !uni_mask |
-        ((pawns & start_pos) << 16) & !(uni_mask | uni_mask << 8) |
-        pawns & (opp_mask >> 7 | opp_mask >> 9)
-    } else {
-        pawns >> 8 & !uni_mask |
-        ((pawns & start_pos) >> 16) & !(uni_mask | uni_mask >> 8) |
-        pawns & (opp_mask << 7 | opp_mask << 9)
+pub fn get_pawn_moves(pawns: u64, opp_mask: u64, uni_mask: u64, start_pos: u64, is_white: bool) -> Vec<u64> {
+    let mut out = vec![];
+    let mut pieces = pawns;
+    let mut idx = pieces.trailing_zeros();
+
+    while idx != 64 {
+        let mask =  if is_white {
+            pawns << 8 & !uni_mask |
+            ((pawns & start_pos) << 16) & !(uni_mask | uni_mask << 8) |
+            pawns & (opp_mask >> 7 | opp_mask >> 9) 
+        } else {
+            pawns >> 8 & !uni_mask |
+            ((pawns & start_pos) >> 16) & !(uni_mask | uni_mask >> 8) |
+            pawns & (opp_mask << 7 | opp_mask << 9)
+        };
+
+        out.push(mask);
+        pieces &= !pieces;
+        idx = pieces.trailing_zeros();
     }
+    
+    out
 }
 
-pub fn get_knight_moves(knights: u64, own_mask: u64) -> u64 {
-    let knight_not_a = NOT_FILE_A & knights;
-    let knight_not_ab = NOT_FILE_AB & knights;
-    let knight_not_gh = NOT_FILE_GH & knights;
-    let knight_not_h = NOT_FILE_H & knights;
+pub fn get_knight_moves(knights: u64, own_mask: u64) -> Vec<u64> {
+    let mut out = vec![];
+    let mut pieces = knights;
+    let mut idx = pieces.trailing_zeros();
 
-    knight_not_a << 15 |
-    knight_not_a >> 17 |
-    knight_not_ab << 6 |
-    knight_not_ab >> 10 |
-    knight_not_gh << 10 |
-    knight_not_gh >> 6 |
-    knight_not_h << 17 |
-    knight_not_h >> 15 &
-    !own_mask
+    while idx != 64 {
+        let knight_not_a = NOT_FILE_A & knights;
+        let knight_not_ab = NOT_FILE_AB & knights;
+        let knight_not_gh = NOT_FILE_GH & knights;
+        let knight_not_h = NOT_FILE_H & knights;
+
+        let mask = knight_not_a << 15 |
+        knight_not_a >> 17 |
+        knight_not_ab << 6 |
+        knight_not_ab >> 10 |
+        knight_not_gh << 10 |
+        knight_not_gh >> 6 |
+        knight_not_h << 17 |
+        knight_not_h >> 15 &
+        !own_mask;
+        
+        out.push(mask);
+        pieces &= !pieces;
+        idx = pieces.trailing_zeros();
+    }
+
+    out
 
 }
 
@@ -86,6 +109,13 @@ pub fn get_bishop_moves(bishops: u64, own_mask: u64, opp_mask: u64) -> Vec<u64> 
     }
     
     out
+}
+
+pub fn get_queen_moves(queens: u64, own_mask: u64, opp_mask: u64) -> Vec<u64> {
+    let rook_like = get_rook_moves(queens, own_mask, opp_mask);
+    let bishop_like = get_bishop_moves(queens, own_mask, opp_mask);
+
+    rook_like.iter().zip(bishop_like.iter()).map(|(a, b)| a | b).collect()
 }
 
 #[inline]
