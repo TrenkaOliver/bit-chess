@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use crate::*;
 
 
@@ -49,7 +47,7 @@ pub fn is_checked(king: u64, board: u64, pawns: u64, knights: u64, bishop_like: 
 
 
 //validates moves so none of the moves leaves the king in check
-pub fn validate_moves(legal_moves: &mut HashSet<(usize, u64, u64)>, piece_type: usize, moves: &[(u64, u64)], board: &[u64; 12], idx: usize, opp_idx: usize, opp_mask: u64, is_white: bool) {
+pub fn validate_moves(legal_moves: &mut Vec<(usize, u64, u64)>, piece_type: usize, moves: &[(u64, u64)], board: &[u64; 12], idx: usize, opp_idx: usize, opp_mask: u64, is_white: bool) {
     for &(moved_piece, mut move_mask) in moves {
         let mut new_pos_idx = move_mask.trailing_zeros();
         while new_pos_idx != 64 {
@@ -80,7 +78,7 @@ pub fn validate_moves(legal_moves: &mut HashSet<(usize, u64, u64)>, piece_type: 
                 temp_board[opp_idx + 3] | temp_board[opp_idx + 4], 
                 is_white
             ) {
-                legal_moves.insert((piece_type, moved_piece, new_pos));
+                legal_moves.push((piece_type, moved_piece, new_pos));
             }
 
             //remove the this move from movemask
