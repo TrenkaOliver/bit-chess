@@ -19,24 +19,24 @@ pub fn get_king_moves(king: u64, own_mask: u64) -> u64 {
     & !own_mask
 }
 
-//error in logic
 pub fn get_pawn_moves(pawns: u64, opp_mask: u64, uni_mask: u64, start_pos: u64, is_white: bool) -> Vec<(u64, u64)> {
     let mut out = vec![];
     let mut pieces = pawns;
     let mut idx = pieces.trailing_zeros();
 
     while idx != 64 {
+        let piece = 1u64 << idx;
         let mask =  if is_white {
-            pawns << 8 & !uni_mask |
-            ((pawns & start_pos) << 16) & !(uni_mask | uni_mask << 8) |
-            pawns & (opp_mask >> 7 | opp_mask >> 9) 
+            piece << 8 & !uni_mask |
+            ((piece & start_pos) << 16) & !(uni_mask | uni_mask << 8) |
+            piece & (opp_mask >> 7 | opp_mask >> 9) 
         } else {
-            pawns >> 8 & !uni_mask |
-            ((pawns & start_pos) >> 16) & !(uni_mask | uni_mask >> 8) |
-            pawns & (opp_mask << 7 | opp_mask << 9)
+            piece >> 8 & !uni_mask |
+            ((piece & start_pos) >> 16) & !(uni_mask | uni_mask >> 8) |
+            piece & (opp_mask << 7 | opp_mask << 9)
         };
 
-        out.push((1u64 << idx, mask));
+        out.push((piece, mask));
         pieces &= !pieces;
         idx = pieces.trailing_zeros();
     }
@@ -77,7 +77,7 @@ pub fn get_knight_moves(knights: u64, own_mask: u64) -> Vec<(u64, u64)> {
 pub fn get_rook_moves(rooks: u64, own_mask: u64, opp_mask: u64) -> Vec<(u64, u64)> {
     let mut out = vec![];
     let mut pieces = rooks;
-    let exit_vertical = RANK_17 | opp_mask | own_mask;
+    let exit_vertical = RANK_1_OR_7 | opp_mask | own_mask;
     let exit_horizontal = FILE_A | FILE_H | opp_mask | own_mask;
     
     let mut idx = pieces.trailing_zeros();
@@ -105,7 +105,7 @@ pub fn get_rook_moves(rooks: u64, own_mask: u64, opp_mask: u64) -> Vec<(u64, u64
 
 //(piece, path)
 pub fn get_first_checking_rook_like(king: u64, rook_like: u64, own_mask: u64, opp_mask: u64) -> Option<(u64, u64)> {
-    let exit_vertical = RANK_17 | opp_mask | own_mask;
+    let exit_vertical = RANK_1_OR_7 | opp_mask | own_mask;
     let exit_horizontal = FILE_A | FILE_H | opp_mask | own_mask;
     
     
@@ -160,7 +160,7 @@ pub fn get_first_checking_rook_like(king: u64, rook_like: u64, own_mask: u64, op
 pub fn get_bishop_moves(bishops: u64, own_mask: u64, opp_mask: u64) -> Vec<(u64, u64)> {
     let mut out = vec![];
     let mut pieces = bishops;
-    let exit_mask = RANK_17 | FILE_A | FILE_H | opp_mask | own_mask;
+    let exit_mask = RANK_1_OR_7 | FILE_A | FILE_H | opp_mask | own_mask;
     
     let mut idx = pieces.trailing_zeros();
     while idx != 64 {
@@ -186,7 +186,7 @@ pub fn get_bishop_moves(bishops: u64, own_mask: u64, opp_mask: u64) -> Vec<(u64,
 }
 
 pub fn get_first_checking_bishop_like( king: u64, bishop_like: u64, own_mask: u64, opp_mask: u64) -> Option<(u64, u64)> {
-    let exit_mask = RANK_17 | FILE_A | FILE_H | opp_mask | own_mask;
+    let exit_mask = RANK_1_OR_7 | FILE_A | FILE_H | opp_mask | own_mask;
     let mut m = 0u64;
 
     //up-right
@@ -233,6 +233,8 @@ pub fn get_first_checking_bishop_like( king: u64, bishop_like: u64, own_mask: u6
 pub fn get_queen_moves(queens: u64, own_mask: u64, opp_mask: u64) -> Vec<(u64, u64)> {
     let rook_like = get_rook_moves(queens, own_mask, opp_mask);
     let bishop_like = get_bishop_moves(queens, own_mask, opp_mask);
+
+    debug_assert_eq!(rook_like.len(), bishop_like.len());
 
     rook_like.iter().zip(bishop_like.iter()).map(|((pos, a), (_, b))| (*pos, (a | b))).collect()
 }

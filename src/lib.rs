@@ -9,7 +9,7 @@ pub const RANK_7: u64 = 0xFF00_0000_0000_0000;
 pub const FILE_AB: u64 = FILE_A | FILE_B;
 pub const FILE_GH: u64 = FILE_G | FILE_H;
 
-pub const RANK_17: u64 = RANK_0 | RANK_7; 
+pub const RANK_1_OR_7: u64 = RANK_0 | RANK_7; 
 
 pub const NOT_FILE_A:  u64 = !FILE_A;
 pub const NOT_FILE_AB: u64 = !FILE_AB;

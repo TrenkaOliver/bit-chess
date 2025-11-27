@@ -183,178 +183,119 @@ fn main() {
         let mut input = input.trim().split(' '); 
 
         //get piece name
-        let piece = input.next().unwrap();
+        let piece_type = input.next().unwrap();
 
         //get information about old position, create required masks
         let old = rank_and_file(input.next().unwrap());
         let old_mask = 1u64 << old.0 * 8 + old.1;
-        let old_mask_rev = old_mask ^ u64::MAX;
 
         //get information about new positon
         let new = rank_and_file(input.next().unwrap());
-
-        //first layer of filtering out invalid moves (does it go out of the board) or doesn't move the piece
-        if old.0 > 7 || old.1 > 7 || new.0 > 7 || new.1 > 7 || (old.0 == new.0 && old.1 == new.1){
-            println!("invalid move, try again!");
-            continue 'main;
-        }
-
-        //second layer of filtering out invalid moves (does it follow the rules)
-        if match piece {
-            "p" | "pawn" => {
-                let delta_rank = new.0 - old.0;
-                let delta_file = new.1 - old.1;
-
-                delta_rank.abs() > 2 || //moves more than 2 squares vertically
-                delta_file.abs() > 1 || //moves more than 2 squares vertically
-                (delta_rank == 2 && delta_file == 0 && is_white && old_mask & WHITE_PAWNS == 0) || //moves 2 with white
-                (delta_rank == -2 && delta_file == 0 && !is_white && old_mask & BLACK_PAWNS == 0) || //moves 2 with black
-                (delta_rank == 1 && delta_file.abs() == 1 && is_white && old_mask << (8 + delta_file) == 0) || //takes with white
-                (delta_rank == 1 && delta_file.abs() == 1 && !is_white && old_mask >> (8 + delta_file) == 0) //takes with black
-            },
-            "k" | "knight" => {
-                (old.0 - new.0).abs() + (old.1 - new.1).abs() != 3 || (new.0 == 0 || new.1 == 0) 
-            },
-            "b" | "bishop" => {
-                old.0 - old.1 != new.0 - new.1 &&
-                old.0 + old.1 != new.0 + new.1
-            }"r" | "rook" => {
-                old.0 != new.0 && old.1 != new.1
-            },
-            "q" | "queen" => {
-                old.0 != new.0 && old.1 != new.1 &&
-                (old.0 - old.1 != new.0 - new.1 && old.0 + old.1 != new.0 + new.1)
-            },
-            "king" => {
-                (old.0 - new.0).abs() > 1 || (old.1 - new.1).abs() > 1
-            },
-            other => {
-                println!("no piece called \"{other}\"");
-                continue 'main;
-            }
-        } {
-            println!("invalid move, try again!");
-            continue 'main;
-        }
-
-        //create necesarry mask about the new position
         let new_mask = 1u64 << new.0 * 8 + new.1;
 
-        //get the index of the given piece in the board array
-        let mut idx: usize = if is_white {0} else {6};
-
-        //create an int to create map for "travelled squares" (excluding squares which the given piece can take)
-        let mut squares: u64 = 0;
-
-        //exit early if there is none of the given piece in the given position
-        //construct the traveled squares mask
-        match piece {
-            "p" | "pawn" => {
-                if old_mask & board[idx] == 0 {println!("invalid move, try again!"); continue 'main;}
-
-                if old.1 == new.1 {
-                    if is_white {
-                        for rank in old.0 + 1..=new.0 {
-                            squares |= 1u64 << rank * 8 + new.1;
-                        };
-                    } else {
-                        for rank in new.0..old.0 {
-                            squares |= 1u64 << rank * 8 + new.1;
-                        }
-                    }
-                }
-            },
-            "k" | "knight" => {
-                idx += 1;
-                if old_mask & board[idx] == 0 {println!("invalid move, try again!"); continue 'main;}
-                //knigh can't pass through anything therefore no "travelled squares" mask needed
-            },
-            "b" | "bishop" => {
-                idx += 2;
-                if old_mask & board[idx] == 0 {println!("invalid move, try again!"); continue 'main;}
-
-                //file distance is equal to rank distance, doesn't matter which one we check
-                let file_distance = (old.0 - new.0).abs();
-                let rank_step = if old.0 > new.0 {-1} else {1};
-                let file_step = if old.1 > new.1 {-1} else {1};
-                for i in 1..file_distance {
-                    let rank = old.0 + i * rank_step;
-                    let file = old.1 + i * file_step;
-                    squares |= 1u64 << rank * 8 + file;
-                }
-            },
-            "r" | "rook" => {
-                idx += 3;
-                if old_mask & board[idx] == 0 {println!("invalid move, try again!"); continue 'main;}
-
-                if old.0 != new.0 { // change within a file 
-                    let rank_distance = (old.0 - new.0).abs();
-                    let step = if old.0 > new.0 {-1} else {1};
-                    for i in 1..rank_distance {
-                        squares |= 1u64 << (old.0 + i * step) * 8 + old.1;
-                    }
-                } else { // change is within a rank
-                    let file_distance = (old.1 - new.1).abs();
-                    let step = if old.1 > new.1 {-1} else {1};
-                    for i in 1..file_distance {
-                        squares |= 1u64 << old.0 * 8 + old.1 + i * step;
-                    }
-                }
-            },
-            "q" | "queen" => {
-                idx += 4;
-                if old_mask & board[idx] == 0 {println!("invalid move, try again!"); continue 'main;}
-                if old.0 != new.0 && old.1 != new.1 { // moved diagnal
-                    //file distance is equal to rank distance, doesn't matter which one we check
-                    let file_distance = (old.0 - new.0).abs();
-                    let rank_step = if old.0 > new.0 {-1} else {1};
-                    let file_step = if old.1 > new.1 {-1} else {1};
-                    for i in 1..file_distance {
-                        let rank = old.0 + i * rank_step;
-                        let file = old.1 + i * file_step;
-                        squares |= 1u64 << rank * 8 + file;
-                    }
-                }
-                else if old.0 != new.0 { // change within a file
-                    let rank_distance = (old.0 - new.0).abs();
-                    let step = if old.0 > new.0 {-1} else {1};
-                    for i in 1..rank_distance {
-                        squares |= 1u64 << (old.0 + i * step) * 8 + old.1;
-                    }
-                } else { // change is within a rank
-                    let file_distance = (old.1 - new.1).abs();
-                    let step = if old.1 > new.1 {-1} else {1};
-                    for i in 1..file_distance {
-                        squares |= 1u64 << old.0 * 8 + old.1 + i * step;
-                    }
-                }
-            },
-            "king" => {
-                idx += 5;
-                if old_mask & board[idx] == 0 {println!("invalid move, try again!"); continue 'main;}
-                squares = new_mask & own_mask;
-            },
-            _ => ()
+        //first layer of filtering out invalid moves (does it go out of the board) or doesn't move the piece
+        if old.0 < 0 || old.0 > 7 || old.1 < 0 || old.1 > 7 || new.0 < 0 || new.0 > 7 || new.1 < 0 || new.1 > 7 || (old.0 == new.0 && old.1 == new.1){
+            println!("invalid move, try again!");
+            continue 'main;
         }
 
-        //check if the piece doesn't pass through anything;
-        if uni_mask & squares != 0 {println!("something's in the way, try again!"); continue 'main;}
+        let mut piece_idx = idx;
+        let legal_moves = match piece_type {
+            "p" | "pawn" => {
+                if old_mask & board[piece_idx] == 0 {
+                    println!("no piece in the specifyed square, try again!");
+                    continue 'main;
+                }
+                get_pawn_moves(old_mask, opp_mask, uni_mask, if is_white {WHITE_PAWNS} else {BLACK_PAWNS}, is_white)[0].1
+            },
+            "n" | "knight" => {
+                piece_idx += 1;
+                if old_mask & board[piece_idx] == 0 {
+                    println!("no piece in the specifyed square, try again!");
+                    continue 'main;
+                }
+                get_knight_moves(old_mask, own_mask)[0].1
+            },
+            "b" | "bishop" => {
+                piece_idx += 2;
+                if old_mask & board[piece_idx] == 0 {
+                    println!("no piece in the specifyed square, try again!");
+                    continue 'main;
+                }
+                get_bishop_moves(old_mask, own_mask, opp_mask)[0].1
+            },
+            "r" | "rook" => {
+                piece_idx += 3;
+                if old_mask & board[piece_idx] == 0 {
+                    println!("no piece in the specifyed square, try again!");
+                    continue 'main;
+                }
+                get_rook_moves(old_mask, own_mask, opp_mask)[0].1
+            },
+            "q" | "queen" => {
+                piece_idx += 4;
+                if old_mask & board[piece_idx] == 0 {
+                    println!("no piece in the specifyed square, try again!");
+                    continue 'main;
+                }
+                get_queen_moves(old_mask, own_mask, opp_mask)[0].1
+            },
+            "k" | "king" => {
+                piece_idx += 5;
+                if old_mask & board[piece_idx] == 0 {
+                    println!("no piece in the specifyed square, try again!");
+                    continue 'main;
+                }
+                get_king_moves(old_mask, own_mask)
+            },
+            other => {
+                println!("no piece named {other}, try again!");
+                continue 'main;
+            }
+        };
 
-        //check if takes something
+        print_mask(legal_moves);
+        print_mask(new_mask);
+        if new_mask & legal_moves == 0 {
+            println!("cannot move here, try again!");
+            continue 'main;
+        }
+
+        //check if takes
+        let mut taken_from = 12; //need this to add back taken piece if move leaves king in check
         if new_mask & opp_mask != 0 {
-            let opp_pieces = if is_white {&mut board[6..12]} else {&mut board[0..6]};
-            for piece in opp_pieces {
-                let taken_piece = new_mask & *piece;
-                if taken_piece != 0 {
-                    *piece &= taken_piece ^ u64::MAX;
+            for mut i in 0..6 {
+                i += opp_idx;
+                if  new_mask & board[i] != 0 {
+                    board[i] &= !new_mask;
+                    taken_from = i;
                     break;
                 }
             }
         }
 
-        //move the piece
-        board[idx] &= old_mask_rev;
-        board[idx] |= new_mask;
+        let mut temp_board = board;
+        temp_board[piece_idx] &= !old_mask;
+        temp_board[piece_idx] |= new_mask;
+
+        //check if leaves king in check
+        if is_checked(
+            temp_board[if is_white {5} else {11}],
+            get_unified_mask(&temp_board),
+            temp_board[opp_idx],
+            temp_board[opp_idx + 1], 
+            temp_board[opp_idx + 2] | temp_board[opp_idx + 4],
+            temp_board[opp_idx + 3] | temp_board[opp_idx + 4],
+            is_white,
+        ) {
+            if taken_from != 12 {
+                board[taken_from] |= new_mask;
+            }
+            println!("this move would leave the king in check, try again!");
+            continue 'main;
+        }
+
+        board = temp_board;        
 
         //flip next move
         is_white = !is_white;
