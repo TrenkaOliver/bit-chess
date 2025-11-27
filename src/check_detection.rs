@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::*;
 
 
@@ -45,15 +47,19 @@ pub fn is_checked(king: u64, board: u64, pawns: u64, knights: u64, bishop_like: 
 
 }
 
-pub fn validate_moves(legal_moves: &mut Vec<(usize, u64, u64)>, piece_type: usize, moves: &[(u64, u64)], board: &[u64; 12], idx: usize, opp_idx: usize, opp_mask: u64, is_white: bool) {
+
+//validates moves so none of the moves leaves the king in check
+pub fn validate_moves(legal_moves: &mut HashSet<(usize, u64, u64)>, piece_type: usize, moves: &[(u64, u64)], board: &[u64; 12], idx: usize, opp_idx: usize, opp_mask: u64, is_white: bool) {
     for &(moved_piece, mut move_mask) in moves {
         let mut new_pos_idx = move_mask.trailing_zeros();
         while new_pos_idx != 64 {
+            //create a temp board for check detection
             let new_pos = 1u64 << new_pos_idx;
             let mut temp_board = *board;
             temp_board[idx + piece_type] &= !moved_piece;
             temp_board[idx + piece_type] |= new_pos;
 
+            //check if something is taken with this move
             if new_pos & opp_mask != 0 {
                 for mut i in 0..6 {
                     i += opp_idx;
@@ -64,6 +70,7 @@ pub fn validate_moves(legal_moves: &mut Vec<(usize, u64, u64)>, piece_type: usiz
                 }
             }
 
+            //check the temp board
             if !is_checked(
                 temp_board[idx + 5], 
                 get_unified_mask(&temp_board), 
@@ -73,9 +80,10 @@ pub fn validate_moves(legal_moves: &mut Vec<(usize, u64, u64)>, piece_type: usiz
                 temp_board[opp_idx + 3] | temp_board[opp_idx + 4], 
                 is_white
             ) {
-                legal_moves.push((piece_type, moved_piece, new_pos));
+                legal_moves.insert((piece_type, moved_piece, new_pos));
             }
 
+            //remove the this move from movemask
             move_mask &= !new_pos;
             new_pos_idx = move_mask.trailing_zeros();
         }

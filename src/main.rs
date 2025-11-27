@@ -1,4 +1,4 @@
-use std::io::{self, Write};
+use std::{collections::HashSet, io::{self, Write}};
 
 use bit_chess::*;
 
@@ -52,7 +52,7 @@ fn main() {
         let queen_moves = get_queen_moves(board[idx + 4], own_mask, opp_mask);
         let king_moves = get_king_moves(board[idx + 5], own_mask);
 
-        let mut legal_moves = Vec::new();
+        let mut legal_moves = HashSet::new();
 
         //filter out illegal pawn_moves
         validate_moves(&mut legal_moves, 0, &pawn_moves, &board, idx, opp_idx, opp_mask, is_white);
