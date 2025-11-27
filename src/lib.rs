@@ -42,10 +42,10 @@ pub use legal_moves::*;
 //processs input coordinates, returns a tuple
 //0: rank, 1: file
 #[inline]
-pub fn rank_and_file(input: &str) -> (i8, i8) {
+pub fn rank_and_file(input: &str) -> (u8, u8) {
     let mut chars = input.chars();
-    let file = chars.next().unwrap().to_ascii_uppercase() as i8;
-    let rank = chars.next().unwrap() as i8;
+    let file = chars.next().unwrap().to_ascii_uppercase() as u8;
+    let rank = chars.next().unwrap() as u8;
     (
         rank - 49, //rank
         file - 65, //file

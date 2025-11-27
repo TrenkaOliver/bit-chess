@@ -45,57 +45,39 @@ pub fn is_checked(king: u64, board: u64, pawns: u64, knights: u64, bishop_like: 
 
 }
 
-//returns attacking opponent's pos, than the squares between the attacing piece and king (exclusive) if the piece is sliding and a usize which represents the type
-pub fn get_check_mask(king: u64, board: u64, pawns: u64, knights: u64, bishop_like: u64, rook_like: u64, queen: u64, is_white: bool, is_blocking: bool) -> Option<(u64, u64, usize)> {
-    //KNIGHT
-    //check against knight mask:
-    let attacking_knight = get_knight_moves(king, 0)[0].1 & knights;
-    if attacking_knight != 0 {return Some((attacking_knight, 0, 1));}
+pub fn validate_moves(legal_moves: &mut Vec<(usize, u64, u64)>, piece_type: usize, moves: &[(u64, u64)], board: &[u64; 12], idx: usize, opp_idx: usize, opp_mask: u64, is_white: bool) {
+    for &(moved_piece, mut move_mask) in moves {
+        let mut new_pos_idx = move_mask.trailing_zeros();
+        while new_pos_idx != 64 {
+            let new_pos = 1u64 << new_pos_idx;
+            let mut temp_board = *board;
+            temp_board[idx + piece_type] &= !moved_piece;
+            temp_board[idx + piece_type] |= new_pos;
 
-    //PAWN
-    //create pawn mask:
-    let pawn_mask = if !is_blocking {
-        if is_white {
-            (king << 7) | (king << 9)
-        } else {
-            (king >> 9) | (king >> 7)
+            if new_pos & opp_mask != 0 {
+                for mut i in 0..6 {
+                    i += opp_idx;
+                    if new_pos & board[i] != 0 {
+                        temp_board[i] &= !new_pos;
+                        break;
+                    }
+                }
+            }
+
+            if !is_checked(
+                temp_board[idx + 5], 
+                get_unified_mask(&temp_board), 
+                temp_board[opp_idx], 
+                temp_board[opp_idx + 1], 
+                temp_board[opp_idx + 2] | temp_board[opp_idx + 4], 
+                temp_board[opp_idx + 3] | temp_board[opp_idx + 4], 
+                is_white
+            ) {
+                legal_moves.push((piece_type, moved_piece, new_pos));
+            }
+
+            move_mask &= !new_pos;
+            new_pos_idx = move_mask.trailing_zeros();
         }
-    } else {
-        let start_pos = if is_white {WHITE_PAWNS} else {BLACK_PAWNS};
-        if is_white {
-            king << 8 & !board |
-            ((king & start_pos) << 16) & !(board | board << 8)
-        } else {
-            king >> 8 & !board |
-            ((king & start_pos) >> 16) & !(board | board >> 8)
-        }
-    };
-
-    //check against mask
-    let attacking_pawn = pawn_mask & pawns;
-    if attacking_pawn != 0 {return Some((attacking_pawn, 0, 0));}
-
-    //BISHOP
-    //create a mask which represent every piece that cannot take diagnal;
-    let other = board & !bishop_like;
-
-    //create diagnal (bishop + queen's diagnal threat) mask:
-    if let Some((a, p)) = get_first_checking_bishop_like(king, bishop_like, other, 0) {
-        let t = if a & queen != 0 {4} else {2};
-        return Some((a, p, t));
     }
-
-    //check against mask:
-
-    //ROOK
-    //recreate other (similar, this doesn't contain not linear hitting pieces)
-    let other = board & !rook_like;
-
-    if let Some((a, p)) = get_first_checking_rook_like(king, rook_like, other, 0) {
-        let t = if a & queen != 0 {4} else {3};
-        return Some((a, p, t));
-    }
-
-    None    
-
 }
