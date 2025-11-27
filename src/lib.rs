@@ -16,6 +16,23 @@ pub const NOT_FILE_AB: u64 = !FILE_AB;
 pub const NOT_FILE_H:  u64 = !FILE_H;
 pub const NOT_FILE_GH: u64 = !FILE_GH;
 
+pub const NOT_RANK_0: u64 = !RANK_0;
+pub const NOT_RANK_7: u64 = !RANK_7;
+
+pub const WHITE_PAWNS: u64   = 0b1111_1111_u64 << 8;
+pub const WHITE_KNIGHTS: u64 = 0b0100_0010_u64;
+pub const WHITE_BISHOPS: u64 = 0b0010_0100_u64;
+pub const WHITE_ROOKS: u64   = 0b1000_0001_u64;
+pub const WHITE_QUEENS: u64  = 0b0000_1000_u64;
+pub const WHITE_KING: u64    = 0b0001_0000_u64;
+
+pub const BLACK_PAWNS: u64   = WHITE_PAWNS << 40;
+pub const BLACK_KNIGHTS: u64 = WHITE_KNIGHTS << 56;
+pub const BLACK_BISHOPS: u64 = WHITE_BISHOPS << 56;
+pub const BLACK_ROOKS: u64   = WHITE_ROOKS << 56;
+pub const BLACK_QUEENS: u64  = WHITE_QUEENS << 56;
+pub const BLACK_KING: u64    = WHITE_KING << 56;
+
 mod check_detection;
 mod legal_moves;
 

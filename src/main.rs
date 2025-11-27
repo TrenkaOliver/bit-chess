@@ -2,20 +2,6 @@ use std::io::{self, Write};
 
 use bit_chess::*;
 
-const WHITE_PAWNS: u64   = 0b1111_1111_u64 << 8;
-const WHITE_KNIGHTS: u64 = 0b0100_0010_u64;
-const WHITE_BISHOPS: u64 = 0b0010_0100_u64;
-const WHITE_ROOKS: u64   = 0b1000_0001_u64;
-const WHITE_QUEENS: u64  = 0b0000_1000_u64;
-const WHITE_KING: u64    = 0b0001_0000_u64;
-
-const BLACK_PAWNS: u64   = WHITE_PAWNS << 40;
-const BLACK_KNIGHTS: u64 = WHITE_KNIGHTS << 56;
-const BLACK_BISHOPS: u64 = WHITE_BISHOPS << 56;
-const BLACK_ROOKS: u64   = WHITE_ROOKS << 56;
-const BLACK_QUEENS: u64  = WHITE_QUEENS << 56;
-const BLACK_KING: u64    = WHITE_KING << 56;
-
 fn main() {
     let mut board = [
         WHITE_PAWNS,
@@ -48,17 +34,8 @@ fn main() {
         let idx = if is_white {0} else {6};
         let opp_idx = if is_white {6} else {0};
 
-        //get all legal moves for each piece type:
-        let pawn_moves = get_pawn_moves(board[idx], opp_mask, uni_mask, if is_white {WHITE_PAWNS} else {BLACK_PAWNS}, is_white);
-        let knight_moves = get_knight_moves(board[idx + 1], own_mask);
-        let bishop_moves = get_bishop_moves(board[idx + 2], own_mask, opp_mask);
-        let rook_moves = get_rook_moves(board[idx + 3], own_mask, opp_mask);
-        let queen_moves = get_queen_moves(board[idx + 4], own_mask, opp_mask);
 
-        
-
-
-        let checked = is_in_check(
+        let checked = is_checked(
             board[if is_white {5} else {11}],
             uni_mask,
             board[opp_idx],
@@ -70,6 +47,131 @@ fn main() {
 
         println!("in check: {}", checked);
 
+        if checked { 'block: {
+            //detect mates
+            //first see if king can move out:
+            let temp_board = uni_mask & !board[idx + 5];
+            let mut king_moves = get_king_moves(board[idx + 5], own_mask);
+            let mut king_move_idx = king_moves.trailing_zeros();
+            while king_move_idx != 64 {
+                let new_king = 1u64 << king_move_idx;
+                let new_board = temp_board | new_king;
+                //check if king takes:
+                let opp_pieces = if is_white {&mut board[6..12]} else {&mut board[0..6]};
+                for piece in opp_pieces {
+                    let taken_piece = new_board & *piece;
+                    if taken_piece != 0 {
+                        *piece &= !taken_piece;
+                        break;
+                    }
+                }
+                if !is_checked(
+                    new_king,
+                    new_board,
+                    board[opp_idx],
+                    board[opp_idx + 1], 
+                    board[opp_idx + 2] | board[opp_idx + 4],
+                    board[opp_idx + 3] | board[opp_idx + 4],
+                    is_white,
+                ) {
+                    println!("exit 1");
+                    break 'block;
+                }
+                king_moves &= !new_king;
+                king_move_idx = king_moves.trailing_zeros();
+            }
+
+            //if couldn't move out with king move forward
+
+            let (checking_piece, mut checking_path, checking_t) = get_check_mask(
+                board[idx + 5],
+                uni_mask,
+                board[opp_idx],
+                board[opp_idx + 1], 
+                board[opp_idx + 2] | board[opp_idx + 4],
+                board[opp_idx + 3] | board[opp_idx + 4],
+                board[opp_idx + 4],
+                is_white,
+                false,
+            ).unwrap(); //must be a check giving piece
+
+            //check if the check giving piece can be taken:
+            if let Some((taking_piece, _, taking_t)) = get_check_mask(
+                checking_piece,
+                uni_mask,
+                board[idx],
+                board[idx + 1], 
+                board[idx + 2] | board[idx + 4],
+                board[idx + 3] | board[idx + 4],
+                board[idx + 4],
+                is_white,
+                false,
+            ) {
+                //take the piece on temp board
+                let mut temp_board = board;
+                temp_board[opp_idx + checking_t] &= !checking_piece;
+                temp_board[idx + taking_t] &= !taking_piece;
+                temp_board[idx + taking_t] |= checking_piece;
+                let temp_uni_mask = get_unified_mask(&temp_board);
+
+                //check if taking leaves the king exposed
+                if !is_checked(
+                    board[idx + 5],
+                    temp_uni_mask,
+                    temp_board[opp_idx],
+                    temp_board[opp_idx + 1], 
+                    temp_board[opp_idx + 2] | temp_board[opp_idx + 4],
+                    temp_board[opp_idx + 3] | temp_board[opp_idx + 4],
+                    is_white,
+                ) {
+                    println!("exit 2");
+                    break 'block;
+                }
+            }
+
+            //if can't take than check if able to block
+            let mut square_to_block_idx = checking_path.trailing_zeros();
+            while square_to_block_idx != 64 {
+                let square_to_block = 1u64 << square_to_block_idx;
+                if let Some((blocking_piece, _, blocking_t)) = get_check_mask(
+                    square_to_block,
+                    uni_mask,
+                    board[idx],
+                    board[idx + 1], 
+                    board[idx + 2] | board[idx + 4],
+                    board[idx + 3] | board[idx + 4],
+                    board[idx + 4],
+                    is_white,
+                    true,
+                ) {
+                    //move the piece on temp board
+                    let mut temp_board = board;
+                    temp_board[idx + blocking_t] &= !blocking_piece;
+                    temp_board[idx + blocking_t] |= square_to_block;
+                    let temp_uni_mask = get_unified_mask(&temp_board);
+
+                    //check if taking leaves the king exposed
+                    if !is_checked(
+                        board[idx + 5],
+                        temp_uni_mask,
+                        temp_board[opp_idx],
+                        temp_board[opp_idx + 1], 
+                        temp_board[opp_idx + 2] | temp_board[opp_idx + 4],
+                        temp_board[opp_idx + 3] | temp_board[opp_idx + 4],
+                        is_white,
+                    ) {
+                        println!("exit 3");
+                        break 'block;
+                    }
+                }
+                checking_path &= !square_to_block;
+                square_to_block_idx = checking_path.trailing_zeros();
+            }
+
+            //if program gets here than mate:
+            println!("mate, {} won", if is_white {"black"} else {"white"});
+            break 'main;
+        }}
 
         //get next move
         print!("{} moves: ", if is_white {"white"} else {"black"});
@@ -202,7 +304,6 @@ fn main() {
             "q" | "queen" => {
                 idx += 4;
                 if old_mask & board[idx] == 0 {println!("invalid move, try again!"); continue 'main;}
-                //todo: implement
                 if old.0 != new.0 && old.1 != new.1 { // moved diagnal
                     //file distance is equal to rank distance, doesn't matter which one we check
                     let file_distance = (old.0 - new.0).abs();
