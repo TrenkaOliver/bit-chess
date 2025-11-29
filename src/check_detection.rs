@@ -45,6 +45,16 @@ pub fn is_checked(king: u64, board: u64, pawns: u64, knights: u64, bishop_like: 
 
 }
 
+pub fn check_slice(king_slice: &[u64], board: u64, pawns: u64, knights: u64, bishop_like: u64, rook_like: u64, is_white: bool) -> bool {
+    for king in king_slice.iter() {
+        if is_checked(*king, board, pawns, knights, bishop_like, rook_like, is_white) {
+            return true;
+        }
+    }
+
+    false
+}
+
 
 //validates moves so none of the moves leaves the king in check
 pub fn validate_moves(legal_moves: &mut Vec<(usize, u64, u64)>, piece_type: usize, moves: &[(u64, u64)], board: &[u64; 12], idx: usize, opp_idx: usize, opp_mask: u64, is_white: bool) {

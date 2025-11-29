@@ -21,6 +21,10 @@ fn main() {
     
     let mut is_white = true;
 
+    let mut can_o_o = true;
+
+    let mut can_o_o_o = true;
+
     'main: loop {
         //print current board:
         print_table(&board);
@@ -77,10 +81,88 @@ fn main() {
         let mut input = String::new();
         io::stdin().read_line(&mut input).expect("error reading input");
 
-        let mut input = input.trim().split(' '); 
+        let mut input = input.trim().split(' ');
+
+        //check if player wants to castle
+        let first = input.next().unwrap();
+
+        if first == "o-o" {
+            if !can_o_o | checked {
+                println!("cannot castle, try again!");
+                continue 'main;
+            }
+
+            //check if safe to castle
+            let king_pos = board[idx + 5];
+            if check_slice(
+                &[king_pos << 1, king_pos << 2],
+                uni_mask, 
+                board[opp_idx], 
+                board[opp_idx + 1], 
+                board[opp_idx + 2] | board[opp_idx + 4], 
+                board[opp_idx + 3] | board[opp_idx + 4], 
+                is_white
+            ) {
+                println!("cannot castle, try again!");
+                continue 'main;
+            }
+
+            //check if something's in the way
+            if uni_mask & if is_white {WHITE_KINGSIDE_MASK} else {BLACK_KINGSIDE_MASK} != 0 {
+                println!("cannot castle, try again!");
+                continue 'main;
+            }
+
+            //castling logic
+            board[idx + 5] <<= 2;
+            let castling_rook = board[idx + 3] & O_O_PIECES;
+            board[idx + 3] &= !castling_rook;
+            board[idx + 3] |= castling_rook >> 2;
+            can_o_o = false;
+            can_o_o_o = false;
+            is_white = !is_white;
+            continue 'main;
+        }
+        if first == "o-o-o" {
+            if !can_o_o_o {
+                println!("cannot castle, try again!");
+                continue 'main;
+            }
+
+            //check if safe to castle
+            let king_pos = board[idx + 5];
+            if check_slice(
+                &[king_pos >> 1, king_pos >> 2, king_pos >> 3],
+                uni_mask, 
+                board[opp_idx], 
+                board[opp_idx + 1], 
+                board[opp_idx + 2] | board[opp_idx + 4], 
+                board[opp_idx + 3] | board[opp_idx + 4], 
+                is_white
+            ) {
+                println!("cannot castle, try again!");
+                continue 'main;
+            }
+
+            //check if something's in the way
+            if uni_mask & if is_white {WHITE_QUEENSIDE_MASK} else {BLACK_QUEENSIDE_MASK} != 0 {
+                println!("cannot castle, try again!");
+                continue 'main;
+            }
+
+            //castling logic
+            board[idx + 5] >>= 2;
+            let castling_rook = board[idx + 3] & O_O_O_PIECES;
+            board[idx + 3] &= !castling_rook;
+            board[idx + 3] |= castling_rook << 3;
+            can_o_o = false;
+            can_o_o_o = false;
+            is_white = !is_white;
+            continue 'main;
+        }
 
         //get piece name
-        let piece_type = match input.next().unwrap() {
+        let piece_type = match first {
             "p" | "pawn" => 0,
             "n" | "knight" => 1,
             "b" | "bishop" => 2,
@@ -123,6 +205,14 @@ fn main() {
                     break;
                 }
             }
+        }
+
+        //chack if still can castle
+        if can_o_o && old_mask & O_O_PIECES != 0 {
+            can_o_o = false;
+        }
+        if can_o_o_o && old_mask & O_O_O_PIECES != 0 {
+            can_o_o_o = false;
         }
 
         let type_idx = idx + piece_type;

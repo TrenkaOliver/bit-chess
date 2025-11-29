@@ -19,6 +19,13 @@ pub const NOT_FILE_GH: u64 = !FILE_GH;
 pub const NOT_RANK_0: u64 = !RANK_0;
 pub const NOT_RANK_7: u64 = !RANK_7;
 
+pub const O_O_PIECES: u64   = FILE_H | WHITE_KING | BLACK_KING;
+pub const O_O_O_PIECES: u64 = FILE_A | WHITE_KING | BLACK_KING;
+pub const WHITE_KINGSIDE_MASK:  u64 = (1u64 << 5)  | (1u64 << 6);
+pub const WHITE_QUEENSIDE_MASK: u64 = (1u64 << 1)  | (1u64 << 2) | (1u64 << 3);
+pub const BLACK_KINGSIDE_MASK:  u64 = (1u64 << 61) | (1u64 << 62);
+pub const BLACK_QUEENSIDE_MASK: u64 = (1u64 << 57) | (1u64 << 58) | (1u64 << 59);
+
 pub const WHITE_PAWNS: u64   = 0b1111_1111_u64 << 8;
 pub const WHITE_KNIGHTS: u64 = 0b0100_0010_u64;
 pub const WHITE_BISHOPS: u64 = 0b0010_0100_u64;
@@ -103,7 +110,7 @@ pub fn print_table(board: &[u64]) {
     println!("  A B C D E F G H\n");
 }
 
-pub fn print_mask(mask: u64) {
+pub fn debug_mask(mask: u64) {
     for rank in (0..8).rev() {
         let rank_value = rank * 8;
         print!("{} ", rank + 1);
