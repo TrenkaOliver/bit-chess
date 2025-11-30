@@ -1,4 +1,4 @@
-use std::{collections::HashSet, io::{self, Write}};
+use std::io::{self, Write};
 
 use bit_chess::*;
 
@@ -19,11 +19,13 @@ fn main() {
         BLACK_KING,
     ];
     
-    let mut is_white = true;
+    let mut is_white = false;
 
     let mut can_o_o = true;
-
+    
     let mut can_o_o_o = true;
+    
+    let mut en_passantable = 0u64;
 
     'main: loop {
         //print current board:
@@ -65,6 +67,11 @@ fn main() {
         validate_moves(&mut legal_moves, 3, &rook_moves, &board, idx, opp_idx, opp_mask, is_white);
         validate_moves(&mut legal_moves, 4, &queen_moves, &board, idx, opp_idx, opp_mask, is_white);
         validate_moves(&mut legal_moves, 5, &[king_moves], &board, idx, opp_idx, opp_mask, is_white);
+
+        //add en_passants
+        if en_passantable != 0 {
+            add_en_passants(&mut legal_moves, &board, board[idx], en_passantable, is_white, idx, opp_idx);
+        }
 
         if legal_moves.is_empty() && checked {
             println!("checkmate, {} won!", if is_white {"black"} else {"white"});
@@ -187,17 +194,23 @@ fn main() {
             continue 'main;
         }
         
+        //creating masks from inputs
         let old_mask = 1u64 << old.0 * 8 + old.1;
         let new_mask = 1u64 << new.0 * 8 + new.1;
         
+        //check if move is legal
         if !legal_moves.contains(&(piece_type, old_mask, new_mask)) {
             println!("not legal move, try again!");
             continue 'main;
         }
 
         //check if takes
-        //need this to add back taken piece if move leaves king in check
-        if new_mask & opp_mask != 0 {
+        //also check if en passant happened
+        let behind_mask = if is_white {new_mask >> 8} else {new_mask << 8};
+        if piece_type == 0 && behind_mask & en_passantable != 0 {
+            board[opp_idx] &= !en_passantable;
+        }
+        else if new_mask & opp_mask != 0 {
             for mut i in 0..6 {
                 i += opp_idx;
                 if  new_mask & board[i] != 0 {
@@ -213,6 +226,13 @@ fn main() {
         }
         if can_o_o_o && old_mask & O_O_O_PIECES != 0 {
             can_o_o_o = false;
+        }
+
+        //check if now black able to en_passant
+        if piece_type == 0 && old_mask & PANW_STARTS != 0 && new_mask & RANK_3_OR_4 != 0 {
+            en_passantable = new_mask;
+        } else {
+            en_passantable = 0;
         }
 
         let type_idx = idx + piece_type;

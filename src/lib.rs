@@ -4,12 +4,15 @@ pub const FILE_G:  u64 = 0x4040_4040_4040_4040;
 pub const FILE_H:  u64 = 0x8080_8080_8080_8080;
 
 pub const RANK_0: u64 = 0x0000_0000_0000_00FF;
+pub const RANK_3: u64 = 0x00000000FF000000;
+pub const RANK_4: u64 = 0x000000FF00000000;
 pub const RANK_7: u64 = 0xFF00_0000_0000_0000;
 
 pub const FILE_AB: u64 = FILE_A | FILE_B;
 pub const FILE_GH: u64 = FILE_G | FILE_H;
 
 pub const RANK_1_OR_7: u64 = RANK_0 | RANK_7; 
+pub const RANK_3_OR_4: u64 = RANK_3 | RANK_4;
 
 pub const NOT_FILE_A:  u64 = !FILE_A;
 pub const NOT_FILE_AB: u64 = !FILE_AB;
@@ -39,6 +42,8 @@ pub const BLACK_BISHOPS: u64 = WHITE_BISHOPS << 56;
 pub const BLACK_ROOKS: u64   = WHITE_ROOKS << 56;
 pub const BLACK_QUEENS: u64  = WHITE_QUEENS << 56;
 pub const BLACK_KING: u64    = WHITE_KING << 56;
+
+pub const PANW_STARTS: u64 = WHITE_PAWNS | BLACK_PAWNS;
 
 mod check_detection;
 mod legal_moves;
@@ -110,6 +115,7 @@ pub fn print_table(board: &[u64]) {
     println!("  A B C D E F G H\n");
 }
 
+//prints a ♙ for 1s and ・ for 0s
 pub fn debug_mask(mask: u64) {
     for rank in (0..8).rev() {
         let rank_value = rank * 8;

@@ -97,3 +97,46 @@ pub fn validate_moves(legal_moves: &mut Vec<(usize, u64, u64)>, piece_type: usiz
         }
     }
 }
+
+pub fn add_en_passants(legal_moves: &mut Vec<(usize, u64, u64)>, board: &[u64; 12], pawns: u64, en_passantable: u64, is_white: bool, idx: usize, opp_idx: usize) {
+    let pawn0 = pawns & ((en_passantable & NOT_FILE_A) >> 1);
+    let pawn1 = pawns & ((en_passantable & NOT_FILE_H) << 1);
+    let new_pos = if is_white {
+        en_passantable << 8
+    } else {
+        en_passantable >> 8
+    };
+
+    let mut temp_board = *board;
+    temp_board[idx] |= new_pos;
+    temp_board[opp_idx] &= !en_passantable;
+    if pawn0 != 0 {
+        temp_board[idx] &= !pawn0;
+        if !is_checked(
+            temp_board[idx + 5], 
+            get_unified_mask(&temp_board), 
+            temp_board[opp_idx], 
+            temp_board[opp_idx + 1], 
+            temp_board[opp_idx + 2] | temp_board[opp_idx + 4], 
+            temp_board[opp_idx + 3] | temp_board[opp_idx + 4], 
+            is_white
+        ) {
+            legal_moves.push((0, pawn0, new_pos));
+        }
+        temp_board[idx] |= pawn0;
+    }
+    if pawn1 != 0 {
+        temp_board[idx] &= !pawn1;
+        if !is_checked(
+            temp_board[idx + 5], 
+            get_unified_mask(&temp_board), 
+            temp_board[opp_idx], 
+            temp_board[opp_idx + 1], 
+            temp_board[opp_idx + 2] | temp_board[opp_idx + 4], 
+            temp_board[opp_idx + 3] | temp_board[opp_idx + 4], 
+            is_white
+        ) {
+            legal_moves.push((0, pawn1, new_pos));
+        }
+    }
+}
